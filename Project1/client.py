@@ -5,28 +5,19 @@
 # https://slixmpp.readthedocs.io/en/latest/
 # https://oriolrius.cat/wp-content/uploads/2009/10/Oreilly.XMPP.The.Definitive.Guide.May.2009.pdf
 import asyncio
-import logging
-from getpass import getpass
-from argparse import ArgumentParser
-
 import slixmpp
 
 asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
 class SendMsgBot(slixmpp.ClientXMPP):
 
-    """
-    A basic Slixmpp bot that will log in, send a message,
-    and then log out.
-    """
 
-    def __init__(self, jid, password, recipient, message):
+    def __init__(self, jid, password):
         slixmpp.ClientXMPP.__init__(self, jid, password)
 
+        self.user = jid
         # The message we wish to send, and the JID that
         # will receive it.
-        self.recipient = recipient
-        self.msg = message
 
         # The session_start event will be triggered when
         # the bot establishes its connection with the server
@@ -51,70 +42,57 @@ class SendMsgBot(slixmpp.ClientXMPP):
         self.send_presence()
         await self.get_roster()
 
-        self.send_message(mto=self.recipient,
-                          mbody=self.msg,
-                          mtype='chat')
+        print("Welcome! ", self.user)
 
-        self.disconnect()
+        menu = True
+        while menu == True:
+            print("1. See Users Info \n2. Add Friend \n3. See 1 User Info \n4. Send Private Message \n5. Send Group Message \n6. Set Presence Message\n7. Log Out\n8. Delete Account")#9. Send notifications\n 10. Send files")
+            option = input("")
 
+            if option == "1":
+                print("--- Users info ---")
+            elif (option == "2"):
+                print("--- Add a friend ---")
+                user = input("Type email to add ")
+
+            elif (option == "3"):
+                print("--- See info of a friend ---")
+                user = input("Type email to add ")
+            elif (option == "4"):
+                await self.get_roster()
+                
+                user = input("Type email to send message: ")
+                message = input("Message: ")
+
+                self.send_message(mto=user,
+                                mbody=message,
+                                mtype='chat')
+            elif (option == "5"):
+                message = input("Message: ")
+            elif (option == "6"):
+                newPresenceMsg = input("Type new presence message: ")
+            elif (option == "7"):
+                print("Have a nice day! :D")
+                menu = False
+                self.disconnect()
+            elif (option == "8"):
+                print("Deleting current account...")
+            else: 
+                print("Try another option!")
+        
 
 if __name__ == '__main__':
-    # Setup the command line arguments.
-    parser = ArgumentParser(description=SendMsgBot.__doc__)
 
-    # Output verbosity options.
-    parser.add_argument("-q", "--quiet", help="set logging to ERROR",
-                        action="store_const", dest="loglevel",
-                        const=logging.ERROR, default=logging.INFO)
-    parser.add_argument("-d", "--debug", help="set logging to DEBUG",
-                        action="store_const", dest="loglevel",
-                        const=logging.DEBUG, default=logging.INFO)
-
-    # JID and password options.
-    parser.add_argument("-j", "--jid", dest="jid",
-                        help="JID to use")
-    parser.add_argument("-p", "--password", dest="password",
-                        help="password to use")
-    parser.add_argument("-t", "--to", dest="to",
-                        help="JID to send the message to")
-    parser.add_argument("-m", "--message", dest="message",
-                        help="message to send")
-
-    args = parser.parse_args()
-
-    # Setup logging.
-    logging.basicConfig(level=args.loglevel,
-                        format='%(levelname)-8s %(message)s')
-
-    if args.jid is None:
-        args.jid = input("Username: ")
-    if args.password is None:
-        args.password = getpass("Password: ")
-    if args.to is None:
-        args.to = input("Send To: ")
-    if args.message is None:
-        args.message = input("Message: ")
+    email = input("Email: ")
+    password = input("Password: ")
 
     # Setup the EchoBot and register plugins. Note that while plugins may
     # have interdependencies, the order in which you register them does
     # not matter.
-
-    xmpp = SendMsgBot(args.jid, args.password, args.to, args.message)
+    xmpp = SendMsgBot(email, password)
     xmpp.register_plugin('xep_0030') # Service Discovery
     xmpp.register_plugin('xep_0199') # XMPP Ping
 
     # Connect to the XMPP server and start processing XMPP stanzas.
     xmpp.connect()
     xmpp.process(forever=False)
-
-
-
-    # email = input("Email: ")
-    # password = input("Password: ")
-    # messageTo = input("EmailToSend: ")
-    # messageToBeSend = input("Type a message: ")
-
-    # # Setup the EchoBot and register plugins. Note that while plugins may
-    # # have interdependencies, the order in which you register them does
-    # # not matter.
-    # xmpp = SendMsgBot(email, password, messageTo, messageToBeSend)
