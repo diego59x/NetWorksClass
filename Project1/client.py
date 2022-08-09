@@ -5,6 +5,7 @@
 # https://slixmpp.readthedocs.io/en/latest/
 # https://oriolrius.cat/wp-content/uploads/2009/10/Oreilly.XMPP.The.Definitive.Guide.May.2009.pdf
 import asyncio
+import logging
 import slixmpp
 
 asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
@@ -67,6 +68,8 @@ class SendMsgBot(slixmpp.ClientXMPP):
                 self.send_message(mto=user,
                                 mbody=message,
                                 mtype='chat')
+                self.disconnect(wait=False)
+
             elif (option == "5"):
                 message = input("Message: ")
             elif (option == "6"):
@@ -83,16 +86,34 @@ class SendMsgBot(slixmpp.ClientXMPP):
 
 if __name__ == '__main__':
 
-    email = input("Email: ")
-    password = input("Password: ")
 
-    # Setup the EchoBot and register plugins. Note that while plugins may
-    # have interdependencies, the order in which you register them does
-    # not matter.
-    xmpp = SendMsgBot(email, password)
-    xmpp.register_plugin('xep_0030') # Service Discovery
-    xmpp.register_plugin('xep_0199') # XMPP Ping
 
-    # Connect to the XMPP server and start processing XMPP stanzas.
-    xmpp.connect()
-    xmpp.process(forever=False)
+    menuUserLogOut = True
+
+    while menuUserLogOut:
+
+        print("1. Login \n2. Create User")
+        option = input("")
+
+        if option == "1":
+            print("--- Log In ---")
+            email = input("Email: ")
+            password = input("Password: ")
+
+            # Setup the EchoBot and register plugins. Note that while plugins may
+            # have interdependencies, the order in which you register them does
+            # not matter.
+            logging.basicConfig(level=logging.DEBUG, format='%(levelname)-8s %(message)s')
+            xmpp = SendMsgBot(email, password)
+            xmpp.register_plugin('xep_0030') # Service Discovery
+            xmpp.register_plugin('xep_0199') # XMPP Ping
+
+            # Connect to the XMPP server and start processing XMPP stanzas.
+            xmpp.connect()
+            xmpp.process(forever=False)
+        elif (option == "2"):
+            pass
+        else:
+            print("Try another option!")
+            
+
