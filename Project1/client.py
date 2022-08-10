@@ -7,43 +7,65 @@
 import asyncio
 import logging
 import slixmpp
+import xmpp
 
 asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
-class SendMsgBot(slixmpp.ClientXMPP):
+class XMPPChat(slixmpp.ClientXMPP):
 
 
     def __init__(self, jid, password):
         slixmpp.ClientXMPP.__init__(self, jid, password)
 
         self.user = jid
-        # The message we wish to send, and the JID that
-        # will receive it.
-
-        # The session_start event will be triggered when
-        # the bot establishes its connection with the server
-        # and the XML streams are ready for use. We want to
-        # listen for this event so that we we can initialize
-        # our roster.
         self.add_event_handler("session_start", self.start)
 
+    def getContacts(self, infoContact):
+        
+
+        contacts = self.client_roster.groups()
+
+        for contact in contacts:
+            print("\n\n------------ Friends --------------")
+
+            for jid in contacts[contact]:
+                name = self.client_roster[jid]['name']
+
+                if name == '':
+                    name = jid
+                # We not show our user
+                if name == self.user:
+                    continue
+
+                if (infoContact != 'SeeAll' and infoContact == name):
+                    self.seeConnections(name, jid)
+                elif (infoContact == 'SeeAll'):
+                    self.seeConnections(name, jid)     
+
+    def seeConnections(self, name, jid):
+        connections = self.client_roster.presence(jid)
+        for res, pres in connections.items():
+            # 'res' is the id of their device
+            show = 'available'
+            # Default value available
+        
+            print('Name: %s (%s)' % (name, show))
+            # Users with a different status
+            if pres['status']:
+                print('%s' % pres['status'])
+
+    def notificationMessage(self, emisor, state):
+        message = self.Message()
+        message["chat_state"] = state
+        message["to"] = emisor
+
+        message.send()
+
     async def start(self, event):
-        """
-        Process the session_start event.
-
-        Typical actions for the session_start event are
-        requesting the roster and broadcasting an initial
-        presence stanza.
-
-        Arguments:
-            event -- An empty dictionary. The session_start
-                     event does not provide any additional
-                     data.
-        """
         self.send_presence()
-        await self.get_roster()
 
         print("Welcome! ", self.user)
+        await self.get_roster()
 
         menu = True
         while menu == True:
@@ -51,24 +73,25 @@ class SendMsgBot(slixmpp.ClientXMPP):
             option = input("")
 
             if option == "1":
-                print("--- Users info ---")
+                self.getContacts('SeeAll')
+
             elif (option == "2"):
                 print("--- Add a friend ---")
                 user = input("Type email to add ")
 
             elif (option == "3"):
                 print("--- See info of a friend ---")
-                user = input("Type email to add ")
+                user = input("Type email to see ")
+                self.getContacts(user)
+
             elif (option == "4"):
-                await self.get_roster()
-                
+
                 user = input("Type email to send message: ")
                 message = input("Message: ")
 
-                self.send_message(mto=user,
-                                mbody=message,
-                                mtype='chat')
-                self.disconnect(wait=False)
+                self.send_message(mto=user, mbody=message, mtype='chat')
+
+                self.notificationMessage(user, 'paused')
 
             elif (option == "5"):
                 message = input("Message: ")
@@ -86,13 +109,11 @@ class SendMsgBot(slixmpp.ClientXMPP):
 
 if __name__ == '__main__':
 
-
-
     menuUserLogOut = True
 
     while menuUserLogOut:
 
-        print("1. Login \n2. Create User")
+        print("Welcome! Choose an option \n1. Login \n2. Create User\n3. Close")
         option = input("")
 
         if option == "1":
@@ -100,20 +121,34 @@ if __name__ == '__main__':
             email = input("Email: ")
             password = input("Password: ")
 
-            # Setup the EchoBot and register plugins. Note that while plugins may
-            # have interdependencies, the order in which you register them does
-            # not matter.
+            email = "alvarez@alumchat.fun"
+            password = "swais"
+
             logging.basicConfig(level=logging.DEBUG, format='%(levelname)-8s %(message)s')
-            xmpp = SendMsgBot(email, password)
-            xmpp.register_plugin('xep_0030') # Service Discovery
-            xmpp.register_plugin('xep_0199') # XMPP Ping
+            login = XMPPChat(email, password)
+            login.register_plugin('xep_0030') # Service Discovery
+            login.register_plugin('xep_0199') # XMPP Ping
+            login.register_plugin("xep_0085")
 
             # Connect to the XMPP server and start processing XMPP stanzas.
-            xmpp.connect()
-            xmpp.process(forever=False)
+            login.connect(disable_starttls=True)
+            login.process(forever=False)
         elif (option == "2"):
-            pass
+            email = input("Email: ")
+            password = input("Password: ")
+
+            jid = xmpp.JID(email)
+            cli = xmpp.Client(jid.getDomain(), debug=[])
+            cli.connect()
+
+            if xmpp.features.register(cli, jid.getDomain(), {'username': jid.getNode(), 'password': password}):
+                print("Creation Done \n--> Please login with new credentials <--")
+            else:
+                print("Something went wrong, try again")
+        elif (option == "3"):
+            print("See you later! :D")
+            menuUserLogOut = False
         else:
             print("Try another option!")
-            
+        
 
