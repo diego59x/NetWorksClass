@@ -8,6 +8,8 @@ import asyncio
 import logging
 import slixmpp
 import xmpp
+from slixmpp.xmlstream import ET
+from slixmpp.exceptions import IqError, IqTimeout
 
 asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
@@ -19,6 +21,27 @@ class XMPPChat(slixmpp.ClientXMPP):
 
         self.user = jid
         self.add_event_handler("session_start", self.start)
+
+
+    def deleteUser(self):
+        resp = self.Iq()
+        resp['type'] = 'set'
+        resp['id'] = 'delete-user-1'
+        resp['from'] = self.boundjid
+        resp['to'] = 'alumchat.fun'
+        query = ET.fromstring("<query xmlns='jabber:iq:register'><remove/></query>")
+        resp.append(query)
+        try:
+            resp.send()
+            print("User Deleted")
+
+        except IqError as err:
+            print("Delete Process Failed")
+            self.disconnect()
+
+        except IqTimeout:
+            print("Session Timeout")
+            self.disconnect()
 
     def getContacts(self, infoContact):
         
@@ -66,7 +89,7 @@ class XMPPChat(slixmpp.ClientXMPP):
 
         print("Welcome! ", self.user)
         await self.get_roster()
-
+        # 2 4 5 6 8 9
         menu = True
         while menu == True:
             print("1. See Users Info \n2. Add Friend \n3. See 1 User Info \n4. Send Private Message \n5. Send Group Message \n6. Set Presence Message\n7. Log Out\n8. Delete Account")#9. Send notifications\n 10. Send files")
@@ -103,6 +126,8 @@ class XMPPChat(slixmpp.ClientXMPP):
                 self.disconnect()
             elif (option == "8"):
                 print("Deleting current account...")
+                menu = False
+                self.deleteUser()
             else: 
                 print("Try another option!")
         
@@ -121,14 +146,16 @@ if __name__ == '__main__':
             email = input("Email: ")
             password = input("Password: ")
 
-            email = "alvarez@alumchat.fun"
-            password = "swais"
+            # email = "alvarez@alumchat.fun"
+            # password = "swais"
 
             logging.basicConfig(level=logging.DEBUG, format='%(levelname)-8s %(message)s')
             login = XMPPChat(email, password)
             login.register_plugin('xep_0030') # Service Discovery
             login.register_plugin('xep_0199') # XMPP Ping
             login.register_plugin("xep_0085")
+            login.register_plugin("xep_0133")
+
 
             # Connect to the XMPP server and start processing XMPP stanzas.
             login.connect(disable_starttls=True)
