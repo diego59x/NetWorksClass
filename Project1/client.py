@@ -37,6 +37,7 @@ class XMPPChat(slixmpp.ClientXMPP):
         self.user = jid
         self.thread = Thread(target=self.handlerNotifications, name="t1")
         self.thread.start()
+        self.newPresenceMsg = 'Hi'
         self.add_event_handler("session_start", self.start)
 
     def addUser(self, email):
@@ -128,7 +129,7 @@ class XMPPChat(slixmpp.ClientXMPP):
         message.send()
 
     async def start(self, event):
-        self.send_presence('chat', 'Hi')
+        self.send_presence('chat', self.newPresenceMsg)
 
         print("Welcome! ", self.user)
         await self.get_roster()
@@ -173,8 +174,8 @@ class XMPPChat(slixmpp.ClientXMPP):
 
             await self.start(event)
         elif (option == "6"):
-            newPresenceMsg = input("Type new presence message: ")
-            self.send_presence('chat', newPresenceMsg)
+            self.newPresenceMsg = input("Type new presence message: ")
+            self.send_presence('chat', self.newPresenceMsg)
 
             await self.start(event)
         elif (option == "7"):
