@@ -35,11 +35,31 @@ class XMPPChat(slixmpp.ClientXMPP):
         slixmpp.ClientXMPP.__init__(self, jid, password)
 
         self.user = jid
+        self.thread = Thread(target=self.handlerNotifications, name="t1")
+        self.thread.start()
         self.add_event_handler("session_start", self.start)
 
     def addUser(self, email):
         self.send_presence_subscription(email)
         print("User Added")
+
+    def handlerNotifications(self):
+        self.add_event_handler("message", self.messageNotifications)
+        self.add_event_handler("presence", self.presenceNotifications)
+
+        await asyncio.sleep(0.5)
+
+        presence = event['status']
+        presence_from = str(event['from']).split("/")[0]
+        if (presence != ''):
+            print("%s presence: %s" % (presence_from, presence) )
+
+    async def messageNotifications(self, event):
+        await asyncio.sleep(0.5)
+
+        message = event['body']
+        message_from = str(event['from']).split("/")[0]
+        print("%s says: %s" % (message_from, message) )
 
     def deleteUser(self):
         resp = self.Iq()
@@ -62,8 +82,6 @@ class XMPPChat(slixmpp.ClientXMPP):
             self.disconnect()
 
     def getContacts(self, infoContact):
-        
-
         contacts = self.client_roster.groups()
 
         for contact in contacts:
@@ -109,65 +127,68 @@ class XMPPChat(slixmpp.ClientXMPP):
         message.send()
 
     async def start(self, event):
-        self.send_presence('chat','Hi')
+        self.send_presence('chat', 'Hi')
 
         print("Welcome! ", self.user)
         await self.get_roster()
-        # 5 
-        menu = True
-        while menu == True:
-            print("1. See Users Info \n2. Add Friend \n3. See 1 User Info \n4. Send Private Message \n5. Send Group Message \n6. Set Presence Message\n7. Log Out\n8. Delete Account")#9. Send notifications
-            option = input("")
 
-            if option == "1":
-                self.getContacts('SeeAll')
+        print("1. See Users Info \n2. Add Friend \n3. See 1 User Info \n4. Send Private Message \n5. Send Group Message \n6. Set Presence Message\n7. Log Out\n8. Delete Account")
+        option = input("")
+        if option == "1":
+            self.getContacts('SeeAll')
+            await self.start(event)
 
-            elif (option == "2"):
-                print("--- Add a friend ---")
-                user = input("Type email to add ")
-                self.addUser(user)
+        elif (option == "2"):
+            print("--- Add a friend ---")
+            user = input("Type email to add ")
+            self.addUser(user)
+            await self.start(event)
 
-            elif (option == "3"):
-                print("--- See info of a friend ---")
-                user = input("Type email to see ")
-                self.getContacts(user)
+        elif (option == "3"):
+            print("--- See info of a friend ---")
+            user = input("Type email to see ")
+            self.getContacts(user)
+            await self.start(event)
 
-            elif (option == "4"):
+        elif (option == "4"):
 
-                user = input("Type email to send message: ")
-                message = input("Message: ")
+            user = input("Type email to send message: ")
+            message = input("Message: ")
 
-                self.send_message(mto=user, mbody=message, mtype='chat')
-                await asyncio.sleep(0.5)
+            self.send_message(mto=user, mbody=message, mtype='chat')
+            await asyncio.sleep(0.5)
 
-                self.notificationMessage(user, 'paused')
+            self.notificationMessage(user, 'paused')
+            await self.start(event)
 
-            elif (option == "5"):
-                group = input("Type group to send message: ")
-                message = input("Message: ")
+        elif (option == "5"):
+            group = input("Type group to send message: ")
+            message = input("Message: ")
 
-                # group = group + "@conference.alumchat.fun"
+            # group = group + "@conference.alumchat.fun"
 
-                self.send_message(mto=group, mbody=message, mtype='groupchat')
-                await asyncio.sleep(0.5)
+            self.send_message(mto=group, mbody=message, mtype='groupchat')
+            await asyncio.sleep(0.5)
 
-                # self.notificationMessage(group, 'paused')
+            await self.start(event)
+        elif (option == "6"):
+            newPresenceMsg = input("Type new presence message: ")
+            self.send_presence('chat', newPresenceMsg)
 
-            elif (option == "6"):
-                newPresenceMsg = input("Type new presence message: ")
-                self.send_presence('chat', newPresenceMsg)
+            await self.start(event)
+        elif (option == "7"):
+            print("Have a nice day! :D")
+            menu = False
+            # self.thread.join()
 
-            elif (option == "7"):
-                print("Have a nice day! :D")
-                menu = False
-                self.disconnect()
-            elif (option == "8"):
-                print("Deleting current account...")
-                menu = False
-                self.deleteUser()
-            else: 
-                print("Try another option!")
-
+            self.disconnect()
+        elif (option == "8"):
+            print("Deleting current account...")
+            menu = False
+            self.deleteUser()
+        else: 
+            print("Try another option!")
+            await self.start(event)
 
 if __name__ == '__main__':
 
@@ -188,10 +209,8 @@ if __name__ == '__main__':
 
             # email = "jojo@alumchat.fun"
             # password = "jojo"
-            # t1 = threading.Thread(target=threadNotifications, name="t1", args=(email, password))
-            # t1.start()
 
-            logging.basicConfig(level=logging.DEBUG, format='%(levelname)-8s %(message)s')
+            # logging.basicConfig(level=logging.DEBUG, format='%(levelname)-8s %(message)s')
             login = XMPPChat(email, password)
             login.register_plugin('xep_0030') # Service Discovery
             login.register_plugin('xep_0199') # XMPP Ping
