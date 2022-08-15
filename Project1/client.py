@@ -47,6 +47,7 @@ class XMPPChat(slixmpp.ClientXMPP):
         self.add_event_handler("message", self.messageNotifications)
         self.add_event_handler("presence", self.presenceNotifications)
 
+    async def presenceNotifications(self, event):
         await asyncio.sleep(0.5)
 
         presence = event['status']
